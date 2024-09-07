@@ -4,7 +4,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, validators
 from flask_wtf.csrf import CSRFProtect
 from datetime import timedelta, datetime
-import os
+import os,re
 import json
 
 app = Flask(__name__)
@@ -28,12 +28,18 @@ def load_users():
 def save_users(users):
     with open(USERS_JSON, 'w') as f:
         json.dump(users, f, indent=4)
+def validate_email_format(form, field):
+    email = field.data
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    if not re.match(email_regex, email):
+        raise validators.ValidationError('Invalid email format')
+
 
 # Registration form class
 class RegistrationForm(FlaskForm):
     first_name = StringField('First Name', [validators.InputRequired(), validators.Length(min=2, max=25)])
     last_name = StringField('Last Name', [validators.InputRequired(), validators.Length(min=2, max=25)])
-    email = StringField('Email', [validators.InputRequired(), validators.Email()])
+    email = StringField('Email', [validators.InputRequired(), validate_email_format])
     username = StringField('Username', [validators.InputRequired(), validators.Length(min=4, max=25)])
     password = PasswordField('Password', [validators.InputRequired(), validators.Length(min=6)])
     confirm_password = PasswordField('Confirm Password', [validators.InputRequired(), validators.EqualTo('password')])

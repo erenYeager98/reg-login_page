@@ -1,38 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Register</title>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/register_style.css') }}">
-    </head>
-    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/register_style.css') }}">
+</head>
 <body>
     <h2>Register</h2>
     <form method="POST">
         {{ form.csrf_token() }}
+
         <label for="first_name">First Name:</label>
-        {{ form.first_name(size=25) }}<br>
+        {{ form.first_name(size=25) }}
+        {% if form.first_name.errors %}
+            <span style="color: red;">{{ form.first_name.errors[0] }}</span>
+        {% endif %}
+        <br>
 
         <label for="last_name">Last Name:</label>
-        {{ form.last_name(size=25) }}<br>
+        {{ form.last_name(size=25) }}
+        {% if form.last_name.errors %}
+            <span style="color: red;">{{ form.last_name.errors[0] }}</span>
+        {% endif %}
+        <br>
 
         <label for="email">Email:</label>
-        {{ form.email(size=25) }}<br>
+        {{ form.email(size=25) }}
+        {% if form.email.errors %}
+            <span style="color: red;">{{ form.email.errors[0] }}</span>
+        {% endif %}
+        <br>
 
         <label for="username">Username:</label>
-        {{ form.username(size=25) }}<br>
+        {{ form.username(size=25) }}
+        {% if form.username.errors %}
+            <span style="color: red;">{{ form.username.errors[0] }}</span>
+        {% endif %}
+        <br>
 
         <label for="password">Password:</label>
-        {{ form.password(size=25) }}<br>
+        {{ form.password(size=25) }}
+        {% if form.password.errors %}
+            <span style="color: red;">{{ form.password.errors[0] }}</span>
+        {% endif %}
+        <br>
 
         <label for="confirm_password">Confirm Password:</label>
-        {{ form.confirm_password(size=25) }}<br>
+        {{ form.confirm_password(size=25) }}
+        {% if form.confirm_password.errors %}
+            <span style="color: red;">{{ form.confirm_password.errors[0] }}</span>
+        {% endif %}
+        <br>
 
         <input type="submit" value="Register">
     </form>
 
-    <p></p>
+    <p>{{ get_flashed_messages() }}</p>
     <a href="/">Already have an account? Log in here</a>
 </body>
 </html>
