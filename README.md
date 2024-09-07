@@ -1,2 +1,2 @@
 # reg-login_page
-This page demonstrates a simple login and registration process.
+This repository holds resource for the registration and login processes. This is built using flask framework. HTML/CSS for structuring and designing.
