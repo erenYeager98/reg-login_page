@@ -1,32 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script defer src="{{ url_for('static', filename='js/script.js') }}"></script>
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Register</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/register_style.css') }}">
+    </head>
+    
 <body>
-    <div class="form-container">
-        <h2>Register</h2>
-        <form method="POST" action="/register" id="registerForm">
-            {{ form.hidden_tag() }}
-            {{ form.username.label }} {{ form.username }}
-            {{ form.password.label }} {{ form.password }}
-            {{ form.confirm_password.label }} {{ form.confirm_password }}
-            <button type="submit">Register</button>
-            <p>Already have an account? <a href="/">Login here</a></p>
-        </form>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <ul>
-                    {% for message in messages %}
-                        <li>{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
-    </div>
+    <h2>Register</h2>
+    <form method="POST">
+        {{ form.csrf_token() }}
+        <label for="first_name">First Name:</label>
+        {{ form.first_name(size=25) }}<br>
+
+        <label for="last_name">Last Name:</label>
+        {{ form.last_name(size=25) }}<br>
+
+        <label for="email">Email:</label>
+        {{ form.email(size=25) }}<br>
+
+        <label for="username">Username:</label>
+        {{ form.username(size=25) }}<br>
+
+        <label for="password">Password:</label>
+        {{ form.password(size=25) }}<br>
+
+        <label for="confirm_password">Confirm Password:</label>
+        {{ form.confirm_password(size=25) }}<br>
+
+        <input type="submit" value="Register">
+    </form>
+
+    <p>{{ get_flashed_messages() }}</p>
+    <a href="/">Already have an account? Log in here</a>
 </body>
 </html>

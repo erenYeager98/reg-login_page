@@ -1,12 +1,10 @@
 {
-    "users": [
-        {
-            "username": "your_username",
-            "password": "$2b$12$CE1iu6bMbQf.hUcup9EiiO5UDa0N7Y1Rz3WJke6nKZ/SNBHieEZeO"
-        },
-        {
-            "username": "dk",
-            "password": "$2b$12$JL48ZFIhYOCu.DYWfecoa.ESmTV77DjkyRg8rF.o6dNNcK1ItFyam"
-        }
-    ]
+    "users": [],
+    "test": {
+        "first_name": "test",
+        "last_name": "test",
+        "username": "test",
+        "email": "test@yahoo.com",
+        "password": "$2b$12$JmNsDwsTc81JNPtH8hAmyuHM3oDyGnkU08C6s3YuPEgFGuu0J7jq."
+    }
 }
