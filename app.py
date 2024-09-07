@@ -1,124 +1,112 @@
-from flask import Flask, request, jsonify
-import bcrypt
-import json
-import os
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_bcrypt import Bcrypt
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, validators
+from flask_wtf.csrf import CSRFProtect
 from datetime import timedelta, datetime
-from flask import session
-
+import os
 app = Flask(__name__)
+app.secret_key = 'strong_secret_key'
+bcrypt = Bcrypt(app)
+csrf = CSRFProtect(app)
 
-# Set a secret key for the session
-app.config['SECRET_KEY'] = 'your_secret_key_here'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # 30 minutes session timeout
+# Dummy user database for demonstration
+users_db = {}
 
-# Path to the JSON file
-JSON_FILE_PATH = 'users.json'
+# Lockout mechanism
+failed_attempts = {}
+LOCKOUT_THRESHOLD = 3  # After 3 failed attempts
+LOCKOUT_TIME = 300  # Lockout time in seconds (5 minutes)
 
-# Load or create the JSON file if it doesn't exist
-def load_users():
-    if not os.path.exists(JSON_FILE_PATH):
-        with open(JSON_FILE_PATH, 'w') as file:
-            json.dump({"users": []}, file)
-    with open(JSON_FILE_PATH, 'r') as file:
-        return json.load(file)
 
-def save_users(data):
-    with open(JSON_FILE_PATH, 'w') as file:
-        json.dump(data, file, indent=4)
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', [validators.InputRequired(), validators.Length(min=4, max=25)])
+    password = PasswordField('Password', [validators.InputRequired(), validators.Length(min=6)])
+    confirm_password = PasswordField('Confirm Password', [validators.InputRequired(), validators.EqualTo('password')])
 
-# Input validation function
-def validate_input(username, password):
-    if not username or not password:
-        return False
-    if len(password) < 6:
-        return False  # Example: Password must be at least 6 characters
-    return True
 
-# Registration route
-@app.route('/register', methods=['POST'])
+class LoginForm(FlaskForm):
+    username = StringField('Username', [validators.InputRequired(), validators.Length(min=4, max=25)])
+    password = PasswordField('Password', [validators.InputRequired()])
+
+
+@app.route('/')
+def index():
+    form = LoginForm()
+    return render_template('login.html', form=form)
+
+
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    data = request.get_json()
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
 
-    username = data.get('username')
-    password = data.get('password')
+        if username in users_db:
+            flash("Username already exists. Try a different one.")
+            return redirect(url_for('register'))
 
-    # Validate inputs
-    if not validate_input(username, password):
-        return jsonify({"error": "Invalid input!"}), 400
+        # Hash the password and store it
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+        users_db[username] = hashed_password
 
-    # Load users from JSON file
-    users = load_users()
+        flash("Registration successful! You can now log in.")
+        return redirect(url_for('index'))
 
-    # Check if username already exists
-    for user in users['users']:
-        if user['username'] == username:
-            return jsonify({"error": "Username already exists!"}), 400
+    return render_template('register.html', form=form)
 
-    # Hash the password
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-    # Add new user to the JSON file
-    new_user = {
-        "username": username,
-        "password": hashed_password
-    }
-    users['users'].append(new_user)
-    save_users(users)
-
-    return jsonify({"message": "User registered successfully!"}), 201
-
-# Login route
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    form = LoginForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
 
-    username = data.get('username')
-    password = data.get('password')
-
-    # Validate inputs
-    if not validate_input(username, password):
-        return jsonify({"error": "Invalid input!"}), 400
-
-    # Load users from JSON file
-    users = load_users()
-
-    # Check if username exists and validate password
-    for user in users['users']:
-        if user['username'] == username:
-            if bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
-                # Set session for the logged-in user
-                session.permanent = True  # Set session to expire after the specified time
-                session['username'] = username
-                session['last_active'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                return jsonify({"message": "Login successful!"}), 200
+        # Lockout check
+        if username in failed_attempts and failed_attempts[username]['count'] >= LOCKOUT_THRESHOLD:
+            lockout_end_time = failed_attempts[username]['time'] + timedelta(seconds=LOCKOUT_TIME)
+            if datetime.now() < lockout_end_time:
+                flash(f"Account locked. Try again later.")
+                return redirect(url_for('index'))
             else:
-                return jsonify({"error": "Invalid password!"}), 400
+                failed_attempts[username]['count'] = 0  # Reset failed attempts after lockout
 
-    return jsonify({"error": "Username not found!"}), 404
-
-# Check session expiration and lockout mechanism
-@app.before_request
-def check_session_timeout():
-    username = session.get('username')
-    last_active = session.get('last_active')
-    
-    if username and last_active:
-        now = datetime.now()
-        last_active_time = datetime.strptime(last_active, '%Y-%m-%d %H:%M:%S')
-        time_difference = now - last_active_time
-
-        if time_difference > app.config['PERMANENT_SESSION_LIFETIME']:
-            session.clear()
-            return jsonify({"error": "Session expired, please log in again!"}), 401
+        # Check if user exists and password matches
+        if username in users_db and bcrypt.check_password_hash(users_db[username], password):
+            session['user'] = username
+            session.permanent = True
+            app.permanent_session_lifetime = timedelta(minutes=30)  # Set session expiration
+            flash("Login successful!")
+            return redirect(url_for('dashboard'))
         else:
-            session['last_active'] = now.strftime('%Y-%m-%d %H:%M:%S')
+            flash("Invalid credentials. Please try again.")
+            if username not in failed_attempts:
+                failed_attempts[username] = {'count': 1, 'time': datetime.now()}
+            else:
+                failed_attempts[username]['count'] += 1
+                failed_attempts[username]['time'] = datetime.now()
+            return redirect(url_for('index'))
 
-# Logout route
-@app.route('/logout', methods=['POST'])
+    return render_template('login.html', form=form)
+
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user' in session:
+        return f"Welcome {session['user']} to your dashboard!"
+    else:
+        flash("Please log in first.")
+        return redirect(url_for('index'))
+
+
+@app.route('/logout')
 def logout():
-    session.clear()
-    return jsonify({"message": "Logged out successfully!"}), 200
+    session.pop('user', None)
+    flash("Logged out successfully!")
+    return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
+    app.run(debug=True)
